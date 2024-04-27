@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+	background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url("/bg.png");
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center;
+}
+
+/* dark mode looking scrollbar */
+::-webkit-scrollbar {
+	width: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: #555;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #121212;
+	border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #242424;
+}
+
+/* SHAKE ANIMATION ON HORIZONTAL DIRECTION */
+.shake {
+	animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.2s both;
+	transform: translate3d(0, 0, 0);
+	backface-visibility: hidden;
+	perspective: 1000px;
+}
+
+@keyframes shake {
+	10%,
+	90% {
+		transform: translate3d(-1px, 0, 0);
+	}
+
+	20%,
+	80% {
+		transform: translate3d(2px, 0, 0);
+	}
+
+	30%,
+	50%,
+	70% {
+		transform: translate3d(-4px, 0, 0);
+	}
+
+	40%,
+	60% {
+		transform: translate3d(4px, 0, 0);
+	}
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.fa-video:hover {
+  animation: blink 0.5s infinite;
+}
+
+/* gradient mềm mại và hiện đại */
+.headerGradient {
+  background: linear-gradient(to right, #8e9eab, #eef2f3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+
+/*Đổ bóng avatar */
+.profilePicStyling {
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/*Font text */
+.textStyling {
+  font-family: 'Poppins', sans-serif;
+  color: #ffffff; /* Xám đậm nhẹ */
+}
+
+/* ring avatar */
+.avatar-ring {
+  border-radius: 50%; /* Cho hình tròn */
+  padding: 3px; /* Điều chỉnh kích thước viền ở đây */
+  background: radial-gradient(circle at 50% 50%, #FAD961 0%, #F76B1C 100%); /* Gradient từ vàng sang cam */
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.25); /* Bóng mờ để tạo độ sâu */
+}
+
+/* ring avatar */
+@media (min-width: 768px) {
+  .avatar-ring {
+    padding: 4px; /* Viền lớn hơn cho màn hình rộng */
+  }
+}
