@@ -4,108 +4,103 @@ import Message from "../models/message.model.js";
 import { getReceiverSocketId, io } from "../socket/socket.js";
 import User from "../models/user.model.js";
 import crypto from "crypto";
-//send
-export const sendMessage = async (req, res) => {
-	try
-	{
-		//declare
-		const message = req.body.message;
-		const { id: receiverId } = req.params;
-		const senderId = req.user._id;
-	    
-		//check file
-		let file;
-		if (!req.file) {
-			file = null;
-		} else {
-			file = req.file.path;
-		}
-        
-		//conversation
-		let conversation = await Conversation.findOne({
-			participants: { $all: [senderId, receiverId] },
-		});
+import AWS from "aws-sdk";
 
-		//check
-		if (!conversation) {
-			conversation = await Conversation.create({
-				participants: [senderId, receiverId],
-			});
-		}
-        
+// Hàm upload file S3
+const uploadFileToS3 = async (file) => {
+AWS.config.update({
+    accessKeyId: "....................",
+    secretAccessKey: "...................",
+    region: "us-west-2"
+} );
 
-		// const user = await User.findOne( { _id: receiverId } );
-		// console.log( user.keypublic );
-        // const publicKey = user.keypublic;
-        // const data = message;
-        // const message_encrypt = (data, publicKey) => {
-        //   const encryptedData = crypto.publicEncrypt(publicKey, Buffer.from(data));
-        //   return encryptedData.toString('base64');
-        // };
-        // const message_encrypted = message_encrypt(data, publicKey);
-		
-		//Creat object message
-		const newMessage = new Message( {
-			senderId,
-			receiverId,
-			message,
-			file: file,
-		} );
-        //add the new message to the conversation
-		if (newMessage) {
-			conversation.messages.push(newMessage._id);
-		}
+    const s3 = new AWS.S3();
+    const params = {
+        Bucket: 'chatonchain',
+        Key: file.originalname,
+        Body: file.buffer,
+        ACL: "public-read"
+    };
 
-		// this will run in parallel
-		await Promise.all([conversation.save(), newMessage.save()]);
-
-		// SOCKET IO FUNCTIONALITY WILL GO HERE
-		const receiverSocketId = getReceiverSocketId(receiverId);
-		if (receiverSocketId) {
-			// io.to(<socket_id>).emit() used to send events to specific client
-			io.to(receiverSocketId).emit("newMessage", newMessage);
-		}
-
-		res.status(201).json(newMessage);
-	} catch (error) {
-		console.log("Error in sendMessage controller: ", error.message);
-		res.status(500).json({ error: "Internal server error" });
-	}
+    try {
+        const data = await s3.upload(params).promise();
+        console.log(`File uploaded successfully at ${data.Location}`);
+        return data.Location;
+    } catch (error) {
+        console.error("Error uploading file to S3:", error);
+        throw new Error("Failed to upload file to S3");
+    }
 };
 
-//get message
+// Gửi tin nhắn
+export const sendMessage = async (req, res) => {
+    try {
+        const { id: receiverId } = req.params;
+        const senderId = req.user._id;
+        const messageContent = req.body.message;
+        const file = req.file;
+
+        // Upload file to S3 (if exists)
+        let fileUrl = null;
+        if (file) {
+            fileUrl = await uploadFileToS3(file);
+        }
+
+        // Tạo tin nhắn mới
+        const newMessage = new Message({
+            senderId,
+            receiverId,
+            message: messageContent,
+            file: fileUrl
+        });
+
+        // Tìm hoặc tạo conversation
+        let conversation = await Conversation.findOne({
+            participants: { $all: [senderId, receiverId] }
+        });
+        if (!conversation) {
+            conversation = await Conversation.create({
+                participants: [senderId, receiverId]
+            });
+        }
+
+        // Thêm tin nhắn mới vào conversation
+        conversation.messages.push(newMessage._id);
+
+        // Lưu conversation và tin nhắn mới
+        await Promise.all([conversation.save(), newMessage.save()]);
+
+        // Gửi tin nhắn mới đến người nhận qua socket IO
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newMessage", newMessage);
+        }
+
+        res.status(201).json(newMessage);
+    } catch (error) {
+        console.error("Error in sendMessage controller:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// Lấy danh sách tin nhắn
 export const getMessages = async (req, res) => {
-	try {
-		const { id: userToChatId } = req.params;
-		const senderId = req.user._id;
-        
-		//TEST RSA
+    try {
+        const { id: userToChatId } = req.params;
+        const senderId = req.user._id;
 
-       	// const user = await User.findOne( { _id: userToChatId } );
-		// console.log( user.keypublic );
-		// const privateKey = user.keyprivate;
-		// const decrypt = (encryptedData, privateKey) => {
-        //      const decryptedData = crypto.privateDecrypt(privateKey, Buffer.from(encryptedData, 'base64'));
-        //      return decryptedData.toString();
-		// };
-		
-		// const message=decrypt{...., privateKey };
+        const conversation = await Conversation.findOne({
+            participants: { $all: [senderId, userToChatId] }
+        }).populate("messages");
 
-		const conversation = await Conversation.findOne({
-			participants: { $all: [senderId, userToChatId] },
-		}).populate("messages"); // NOT REFERENCE BUT ACTUAL MESSAGES
-        // console.log(conversation);
-		
-		// conversation = maps.conversation(
-		// 	conversation.messages=decrypt(conversation.messages, privateKey)
-		// )
-   		
-		if (!conversation) return res.status(200).json([]);
-            
-		const messages = conversation.messages;
-		res.status(200).json(messages);
-	} catch (error) {
-		console.log("Error in getMessages controller: ", error.message);
-		res.status(500).json({ error: "Internal server error" });
-	}
+        if (!conversation) {
+            return res.status(200).json([]);
+        }
+
+        const messages = conversation.messages;
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error("Error in getMessages controller:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
