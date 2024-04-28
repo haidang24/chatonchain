@@ -19,9 +19,9 @@ const Message = ( { message } ) => {
 	//check file image
    const messageImage = message.file ? (
     <div className="message-image-container mt-2">
-      <img src={"https://cdn.sforum.vn/sforum/wp-content/uploads/2023/08/hinh-nen-meo-7.jpg"}  
+      <img src={message.file}  
         alt="error"
-        style={{width: "100px", height: "150px"}}
+        style={{maxWidth: "300px", maxheight: "350px"}}
         className="message-image rounded-lg shadow-md"
       />
     </div>
